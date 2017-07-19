@@ -1,22 +1,22 @@
 #ifndef __TCP_PLATFORM_H__
 #define __TCP_PLATFORM_H__
 
-extern const int TCP_PLATFORM_UNKOWN		=       0;
-extern const int TCP_PLATFORM_IOS			=       1;
-extern const int TCP_PLATFORM_ANDROID		=       2;
-extern const int TCP_PLATFORM_WIN32		=       3;
-extern const int TCP_PLATFORM_MARMALADE    =       4;
-extern const int TCP_PLATFORM_LINUX        =       5;
-extern const int TCP_PLATFORM_BADA         =       6;
-extern const int TCP_PLATFORM_BLACKBERRY   =       7;
-extern const int TCP_PLATFORM_MAC          =       8;
-extern const int TCP_PLATFORM_NACL         =       9;
-extern const int TCP_PLATFORM_EMSCRIPTEN   =       10;
-extern const int TCP_PLATFORM_TIZEN        =       11;
-extern const int TCP_PLATFORM_QT5          =       12;
-extern const int TCP_PLATFORM_WINRT        =       13;
+#define  TCP_PLATFORM_UNKOWN		       0
+#define TCP_PLATFORM_IOS			       1
+#define TCP_PLATFORM_ANDROID		      2
+#define TCP_PLATFORM_WIN32		      3
+#define TCP_PLATFORM_MARMALADE          4
+#define TCP_PLATFORM_LINUX              5
+#define TCP_PLATFORM_BADA               6
+#define TCP_PLATFORM_BLACKBERRY  7
+#define TCP_PLATFORM_MAC                8
+#define TCP_PLATFORM_NACL               9
+#define TCP_PLATFORM_EMSCRIPTEN         10
+#define TCP_PLATFORM_TIZEN              11
+#define TCP_PLATFORM_QT5                12
+#define TCP_PLATFORM_WINRT              13
 
-#define	TCP_TARGET_PLATFORM  TCP_PLATFORM_UNKOWN;
+#define	TCP_TARGET_PLATFORM  TCP_PLATFORM_UNKOWN
 
 //Apple 
 #if defined(__APPLE__) && !defined(ANDROID) // execlude android for binding generator.
