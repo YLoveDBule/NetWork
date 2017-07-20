@@ -274,20 +274,17 @@ bool TCPSocket::MappedBuffer(void *pData, unsigned short wDataSize)
 	//变量定义
 	unsigned char *buffer = (unsigned char*)pData;
 	unsigned char cbCheckCode = 0;
-
+	//设置数据
+	TCP_Info *pInfo = (TCP_Info*)pData;
+	pInfo->wPacketSize = wDataSize;
+	pInfo->cbDataKind = DK_MAPPED;
 	//映射数据
-	for (size_t i = sizeof(TCP_Info); i < wDataSize ; ++i)
+	for (size_t i = sizeof(TCP_Head); i < wDataSize ; ++i)
 	{
 		cbCheckCode += buffer[i];
 		buffer[i] = g_SendByteMap[buffer[i]];
 	}
-
-	//设置数据
-	TCP_Info *pInfo = (TCP_Info*)pData;
 	pInfo->cbCheckCode = ~cbCheckCode + 1;
-	pInfo->wPacketSize = wDataSize;
-	pInfo->cbCheckCode |= DK_MAPPED;
-
 	return true;
 }
 
@@ -400,6 +397,8 @@ SendState TCPSocket::sendDataBuffer(void *data, size_t size)
 		{
 #if (TCP_TARGET_PLATFORM == TCP_PLATFORM_WIN32 || \
 	TCP_TARGET_PLATFORM == TCP_PLATFORM_ANDROID)
+			SendPacket *a = (SendPacket*)data;
+			auto b = a->getData();
 			auto result = send(m_socket, (char*)data + sended,
 				size - sended, 0);
 #endif
