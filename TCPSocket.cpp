@@ -2,6 +2,7 @@
 #include <memory>
 #include <sstream>
 #include <assert.h>
+#include "proj.win32\TCPCommon.h"
 
 
 TCPSocket::TCPSocket()
@@ -207,7 +208,47 @@ void TCPSocket::resetData()
 
 bool TCPSocket::checkrecvfall(const int resultCode)
 {
-	return true;
+	auto result = false;
+	if (m_socket != INVALID_SOCKET && m_socketStatus != SOCKET_STATUS_IDLE)
+	{
+		if (resultCode == 0)
+		{
+			if (m_pITCPSocketSink)
+			{
+				m_pITCPSocketSink->OnEventTCPSocketShut(m_socket, SHUT_REASON_NORMAL);
+			}
+			result = true;
+		}
+		else if (resultCode == SOCKET_ERROR || resultCode < 0)
+		{
+#if TCP_TARGET_PLATFORM == TCP_PLATFORM_WIN32
+			auto error = WSAGetLastError();
+			if (error != WSAEWOULDBLOCK && error != ERROR_SUCCESS)
+			{
+				if (m_pITCPSocketSink)
+				{
+					m_pITCPSocketSink->OnEventTCPSocketShut(m_socket, SHUT_REASON_EXCEPTION);
+				}
+				result = true;
+			}
+#else 
+			auto error = errno;
+			if (error != EAGAIN && error != EINPROGRESS && error != EWOULDBLOCK)
+			{
+				if (m_pITCPSocketSink)
+				{
+					m_pITCPSocketSink->OnEventTCPSocketShut(m_socket, SHUT_REASON_EXCEPTION);
+				}
+				result = true;
+			}
+#endif
+		}
+		if (result)
+		{
+			m_socketStatus = SOCKET_STATUS_IDLE;
+		}
+	}
+	return result;
 }
 
 void TCPSocket::beginSendMsg()
@@ -275,25 +316,34 @@ bool TCPSocket::MappedBuffer(void *pData, unsigned short wDataSize)
 	unsigned char *buffer = (unsigned char*)pData;
 	unsigned char cbCheckCode = 0;
 	//设置数据
-	TCP_Info *pInfo = (TCP_Info*)pData;
-	pInfo->wPacketSize = wDataSize;
-	pInfo->cbDataKind = DK_MAPPED;
+	TCP_Head *pInfo = (TCP_Head*)pData;
+	pInfo->TCPInfo.wPacketSize = wDataSize;
+	pInfo->TCPInfo.cbDataKind = DK_MAPPED;
 	//映射数据
-	for (size_t i = sizeof(TCP_Head); i < wDataSize ; ++i)
+	for (size_t i = sizeof(TCP_Info); i < wDataSize ; ++i)
 	{
 		cbCheckCode += buffer[i];
 		buffer[i] = g_SendByteMap[buffer[i]];
 	}
-	pInfo->cbCheckCode = ~cbCheckCode + 1;
+	pInfo->TCPInfo.cbCheckCode = ~cbCheckCode + 1;
 	return true;
 }
 
 bool TCPSocket::UnMappedBuffer(void *pData, unsigned short wDataSize)
 {
 	unsigned char *buffer = (unsigned char *)pData;
-	TCP_Info *pInfo = (TCP_Info *)pData;
+	assert(wDataSize >= sizeof(TCP_Head));
+	assert(((TCP_Head *)pData)->TCPInfo.wPacketSize == wDataSize);
+	TCP_Head *pInfo = (TCP_Head *)pData;
+	if (pInfo->TCPInfo.cbDataKind == DK_MAPPED)
+	{
+		for (size_t i = sizeof(TCP_Info); i < wDataSize; ++i)
+		{
+			buffer[i] = g_RecvByteMap[buffer[i]];
+		}
+	}
 
-	if ((pInfo->cbDataKind & DK_MAPPED) != 0)
+	/*if ((pInfo->cbDataKind & DK_MAPPED) != 0)
 	{
 		unsigned short cbCheckCode = pInfo->cbCheckCode;
 		for (size_t i = sizeof(TCP_Info); i < wDataSize ; ++i)
@@ -306,7 +356,7 @@ bool TCPSocket::UnMappedBuffer(void *pData, unsigned short wDataSize)
 		{
 			return false;
 		}
-	}
+	}*/
 	return true;
 }
 
@@ -341,7 +391,6 @@ void TCPSocket::update(float dt)
 
 int TCPSocket::getData()
 {
-	return 1;
 	try
 	{
 		auto iresult = recv(m_socket, (char *)m_buff4Rcv + m_recvedSize, sizeof(m_buff4Rcv) - m_recvedSize, 0);
@@ -356,12 +405,12 @@ int TCPSocket::getData()
 		}
 		m_recvedSize += iresult;
 		unsigned short wPacketSize = 0;
-		unsigned char cbDataBuffer[SOCKET_TCP_PACKET + sizeof(TCP_Head)];
+		unsigned char cbDataBuffer[SOCKET_TCP_BUFFER];
 		TCP_Head *pHead = (TCP_Head*)m_buff4Rcv;
 		while (m_recvedSize >= sizeof(TCP_Head))
 		{
 			wPacketSize = pHead->TCPInfo.wPacketSize;
-			assert(pHead->TCPInfo.cbDataKind == SOCKET_TCP_VER);
+			assert(pHead->TCPInfo.cbDataKind == DK_MAPPED);
 			assert(wPacketSize <= (SOCKET_TCP_BUFFER));
 			if (m_recvedSize < wPacketSize)
 			{
@@ -370,9 +419,40 @@ int TCPSocket::getData()
 			memcpy(cbDataBuffer, m_buff4Rcv, wPacketSize);
 			m_recvedSize -= wPacketSize;
 			memmove(m_buff4Rcv, m_buff4Rcv + wPacketSize, m_recvedSize);
+			UnMappedBuffer(&cbDataBuffer, wPacketSize);
 			unsigned short wRealySize = wPacketSize;
+			TCP_Head *tcpHead = (TCP_Head *)cbDataBuffer;
+			void *pDataBuffer = cbDataBuffer + sizeof(TCP_Head);
+			unsigned short wDataSize = wRealySize - sizeof(TCP_Head);
+			if (tcpHead->CommandInfo.wMainCmdID == MDM_KN_COMMAND)
+			{
+				switch (tcpHead->CommandInfo.wSubCmdID)
+				{
+				case SUB_KN_DETECT_SOCKET: //网络检测
+				{
+					//send data 
+					sendData(MDM_KN_COMMAND, SUB_KN_DETECT_SOCKET, pDataBuffer, wDataSize);
+					break;
+				}
+				default:
+					break;
+				}
+				continue;
+			}
+			//处理数据
+			//bool bSuccess = m_pITCPSocketSink->OnEventTCPSocketRead(m_socket, tcpHead->CommandInfo, pDataBuffer, wDataSize);
+			//if (bSuccess == false )
+			//{
+			//	throw TEXT("网络数据包处理失败");
+			//}
 
-			
+			RecvPacket rp;
+			rp.SID = m_socket;
+			rp.Comd = tcpHead->CommandInfo;
+			memcpy(rp.Data, pDataBuffer, wDataSize);
+			rp.Size = wDataSize;
+			m_recvPacketList.push(rp);
+
 		}
 	}
 	catch (...)
@@ -382,6 +462,17 @@ int TCPSocket::getData()
 	return 1;
 }
 
+
+bool TCPSocket::registerSink(ITCPSocketSink * value)
+{
+	assert(m_pITCPSocketSink != nullptr);
+	if (m_pITCPSocketSink == nullptr)
+	{
+		return false;
+	}
+	m_pITCPSocketSink = value;
+	return true;
+}
 
 SendState TCPSocket::sendDataBuffer(void *data, size_t size)
 {
@@ -397,8 +488,6 @@ SendState TCPSocket::sendDataBuffer(void *data, size_t size)
 		{
 #if (TCP_TARGET_PLATFORM == TCP_PLATFORM_WIN32 || \
 	TCP_TARGET_PLATFORM == TCP_PLATFORM_ANDROID)
-			SendPacket *a = (SendPacket*)data;
-			auto b = a->getData();
 			auto result = send(m_socket, (char*)data + sended,
 				size - sended, 0);
 #endif

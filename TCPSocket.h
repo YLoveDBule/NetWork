@@ -107,6 +107,7 @@ public:
 	virtual bool UnMappedBuffer(void *pData, unsigned short wDataSize);
 	virtual void update(float dt);
 	virtual int  getData();
+	virtual bool registerSink(ITCPSocketSink * value);
 protected:
 	virtual bool dnsParse(std::string serverIp);
 	virtual void setSocket(SOCKET value);
