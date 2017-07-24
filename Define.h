@@ -28,3 +28,9 @@
 #define VERSION_PLAZA				PROCESS_VERSION(7,0,1)				//大厅版本
 #define VERSION_MOBILE_ANDROID		PROCESS_VERSION(7,0,1)				//手机版本
 #define VERSION_MOBILE_IOS			PROCESS_VERSION(7,0,1)				//手机版本
+
+template<typename T, typename... Ts>
+std::unique_ptr<T> make_unique(Ts&&... params)
+{
+	return std::unique_ptr<T>(new T(std::forward<Ts>(params)...));
+}

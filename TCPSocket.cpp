@@ -50,7 +50,7 @@ bool TCPSocket::init()
 		return false;
 	}
 #endif
-	cocos2d::Director::getInstance()->getScheduler()->schedule(schedule_selector(TCPSocket::update), this, 1.0f / 60.0f, false);
+	//cocos2d::Director::getInstance()->getScheduler()->schedule(schedule_selector(TCPSocket::update), this, 1.0f / 60.0f, false);
 	return true;
 }
 
@@ -360,7 +360,7 @@ bool TCPSocket::UnMappedBuffer(void *pData, unsigned short wDataSize)
 	return true;
 }
 
-void TCPSocket::update(float dt)
+void TCPSocket::update()
 {
 	if (m_socket != SOCKET_ERROR)
 	{
@@ -472,6 +472,77 @@ bool TCPSocket::registerSink(ITCPSocketSink * value)
 	}
 	m_pITCPSocketSink = value;
 	return true;
+}
+
+int TCPSocket::isConnected()
+{
+	if (m_socket == INVALID_SOCKET)
+	{
+		return CONNECT_FAILURE;
+	}
+	fd_set set;
+	struct timeval tv;
+	//将set清零使得集合中不含任何套接字
+	FD_ZERO(&set);
+	//将套接字加入set集合
+	FD_SET(m_socket, &set);
+	//设置时间 0 0  非阻塞
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+	if (select((int)(m_socket), NULL, &set, NULL, &tv) > 0)
+	{
+		//测试 套接字是否在set中
+		if (FD_ISSET(m_socket,&set))
+		{
+#if TCP_TARGET_PLATFORM == TCP_PLATFORM_WIN32 
+			return CONNECT_FAILURE;
+#elif TCP_TARGET_PLATFORM == TCP_PLATFORM_IOS || TCP_TARGET_PLATFORM == TCP_PLATFORM_ANDROID 
+			int error;
+			socklen_t len = sizeof(error);
+			if (getsockopt(m_socket,SOL_SOCKET,SO_ERROR,&error,&len) < 0)
+			{
+				return CONNECT_FAILURE;
+			}
+#endif
+		}
+		else
+		{
+			return CONNECT_FAILURE;
+		}
+	}
+	else
+	{
+		return CONNECT_FAILURE;
+	}
+	return CONNECT_INPROGRESS;
+}
+
+bool TCPSocket::hasError()
+{
+#if TCP_TARGET_PLATFORM == TCP_PLATFORM_WIN32
+	int err = WSAGetLastError();
+	if (err != WSAEWOULDBLOCK && err != ERROR_SUCCESS)
+	{
+		return true;
+	}
+#else 
+	int err = errno;
+	if (err != EINPROGRESS && err != EAGAIN)
+	{
+		return true;
+	}
+#endif
+	return false;
+}
+
+SOCKET TCPSocket::getSocket()
+{
+	return m_socket;
+}
+
+bool TCPSocket::isActive()
+{
+	return (m_socket != INVALID_SOCKET);
 }
 
 SendState TCPSocket::sendDataBuffer(void *data, size_t size)

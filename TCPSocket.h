@@ -5,7 +5,6 @@
 #include "Packet.h"
 #include <string>
 #include "NimeiQueue.h"
-#include "cocos2d.h"
 #if TCP_TARGET_PLATFORM == TCP_PLATFORM_WIN32
 #include <WinSock2.h>
 #include <io.h>
@@ -86,7 +85,7 @@ typedef struct RecvPacket {
 	}
 } RecvPacket;
 
-class TCPSocket : public cocos2d::Ref
+class TCPSocket 
 {
 public:
 	TCPSocket();
@@ -105,9 +104,13 @@ public:
 	virtual bool sendData();
 	virtual bool MappedBuffer(void *pData, unsigned short wDataSize);
 	virtual bool UnMappedBuffer(void *pData, unsigned short wDataSize);
-	virtual void update(float dt);
+	virtual void update();
 	virtual int  getData();
 	virtual bool registerSink(ITCPSocketSink * value);
+	virtual int isConnected();
+	virtual bool hasError();
+	virtual SOCKET getSocket();
+	virtual bool isActive();
 protected:
 	virtual bool dnsParse(std::string serverIp);
 	virtual void setSocket(SOCKET value);
