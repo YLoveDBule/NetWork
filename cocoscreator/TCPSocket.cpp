@@ -2,7 +2,7 @@
 #include <memory>
 #include <sstream>
 #include <assert.h>
-#include "proj.win32\TCPCommon.h"
+#include "TCPCommon.h"
 
 
 TCPSocket::TCPSocket()

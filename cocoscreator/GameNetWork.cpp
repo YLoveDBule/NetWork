@@ -1,4 +1,5 @@
 #include "GameNetWork.h"
+#include "GameNetWorkManager.h"
 
 GameNetWork::GameNetWork()
 	:m_tcpSocket(nullptr)
@@ -155,10 +156,12 @@ bool GameNetWork::OnEventTCPSocketLink(unsigned short wSocketID, int nErrorCode)
 
 bool GameNetWork::OnEventTCPSocketShut(unsigned short wSocketID, unsigned char cbShutReason)
 {
-
+	GameNetWorkManager::getInstance().OnEventTCPSocketShut(wSocketID, cbShutReason);
+	return true;
 }
 
 bool GameNetWork::OnEventTCPSocketRead(unsigned short wSocketID, TCP_Command Command, void *pData, unsigned short wDataSize)
 {
-
+	GameNetWorkManager::getInstance().houseNetMessage(wSocketID, Command, pData, wDataSize);
+	return true;
 }

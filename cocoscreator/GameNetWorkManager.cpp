@@ -29,7 +29,8 @@ void GameNetWorkManager::clear()
 		if (itor->second)
 		{
 			itor->second->closeSock();
-			itor->second.reset(nullptr);
+			delete itor->second;
+			itor->second = nullptr;
 		}
 	}
 
@@ -39,11 +40,13 @@ void GameNetWorkManager::clear()
 	{
 		if (m_gameNetWorkStack.top())
 		{
-			m_gameNetWorkStack.top().reset(nullptr);
+			delete m_gameNetWorkStack.top();
+			m_gameNetWorkStack.top() = nullptr;
 			m_gameNetWorkStack.pop();
 		}
 	}
-
+	GameNetWorkStack empty;
+	m_gameNetWorkStack.swap(empty);
 }
 
 void GameNetWorkManager::end()
@@ -51,21 +54,25 @@ void GameNetWorkManager::end()
 	m_isValid = false;
 }
 
-void GameNetWorkManager::registerMsgAdopter(std::unique_ptr<NetMsgAdpoter> &adopter)
+void GameNetWorkManager::registerMsgAdopter(NetMsgAdpoter *adopter)
 {
-	m_msgAdopter.reset(adopter.release());
+	m_msgAdopter = adopter;
 }
 
 void GameNetWorkManager::askToSubserver(const int recorder, const char*ip, const int port)
 {
-	std::unique_ptr<GameNetWork> network = nullptr;
-	if (strlen(ip) != 0 && getValidNetwork(network))
+	GameNetWork *network = nullptr;
+	if (strlen(ip) != 0 && getValidNetwork(&network))
 	{
 		if (network && network->init() && network->connectServer(ip,port))
 		{
-			addNewNet(network);
+			/*if (m_gameNetWorkPool.find(network->getSocket()) == m_gameNetWorkPool.end())
+			{
+				m_gameNetWorkPool.insert(std::make_pair(network->getSocket(), network));
+			}*/
+			addNewNet(std::move(network));
 			m_recorderSID.insert(std::make_pair(recorder, network->getSocket()));
-			
+			askToSubserverResult();
 		}
 	}
 	else
@@ -91,14 +98,13 @@ void GameNetWorkManager::pushServerAskResult(const int recorder, const SOCKET so
 	}
 }
 
-void GameNetWorkManager::addNewNet(std::unique_ptr<GameNetWork>& value)
+void GameNetWorkManager::addNewNet(GameNetWork *value)
 {
-	if (m_gameNetWorkPool.find(value->getSocket())== m_gameNetWorkPool.end())
+	if (m_gameNetWorkPool.find(value->getSocket()) == m_gameNetWorkPool.end())
 	{
 		m_gameNetWorkPool.insert(std::make_pair(value->getSocket(), value));
 	}
 }
-
 
 void GameNetWorkManager::removeNet(const SOCKET value)
 {
@@ -114,7 +120,8 @@ void GameNetWorkManager::collectIdleNW()
 		{
 			if (itor->second && !itor->second->isActive())
 			{
-				itor->second.reset(nullptr);
+				delete itor->second;
+				itor->second = nullptr;
 				itor = m_gameNetWorkPool.erase(itor);
 			}
 			else 
@@ -125,18 +132,24 @@ void GameNetWorkManager::collectIdleNW()
 	}
 }
 
-bool GameNetWorkManager::getValidNetwork(std::unique_ptr<GameNetWork>& value)
+
+bool GameNetWorkManager::getValidNetwork(GameNetWork **value)
 {
-	value = make_unique<GameNetWork>();
-	return (value != nullptr);
+	bool result = false;
+
+	if (!result) {
+		result = ((*value = new GameNetWork()) != nullptr);
+	}
+
+	return result;
 }
 
-bool GameNetWorkManager::getIdleNetWork(std::unique_ptr<GameNetWork>& value)
+bool GameNetWorkManager::getIdleNetWork(GameNetWork* value)
 {
 	auto result = false;
 	if (m_gameNetWorkStack.size() != 0)
 	{
-		value.reset(m_gameNetWorkStack.top().release());
+		value = m_gameNetWorkStack.top();
 		m_gameNetWorkStack.pop();
 		result = true;
 	}
@@ -145,7 +158,7 @@ bool GameNetWorkManager::getIdleNetWork(std::unique_ptr<GameNetWork>& value)
 
 void GameNetWorkManager::closeConnect(const int sid)
 {
-	if (m_gameNetWorkPool.find(sid) != m_gameNetWorkPool.end)
+	if (m_gameNetWorkPool.find(sid) != m_gameNetWorkPool.end())
 	{
 		if (m_gameNetWorkPool.at(sid))
 		{
