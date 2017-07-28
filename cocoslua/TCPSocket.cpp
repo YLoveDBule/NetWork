@@ -465,11 +465,6 @@ int TCPSocket::getData()
 
 bool TCPSocket::registerSink(ITCPSocketSink * value)
 {
-	assert(m_pITCPSocketSink != nullptr);
-	if (m_pITCPSocketSink == nullptr)
-	{
-		return false;
-	}
 	m_pITCPSocketSink = value;
 	return true;
 }

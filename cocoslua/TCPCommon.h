@@ -46,27 +46,5 @@
 //机器标识
 #define LEN_NETWORK_ID				13									//网卡长度
 #define LEN_MACHINE_ID				33									//序列长度
-struct CMD_MB_LogonAccounts
-{
-	//系统信息
-	WORD							wModuleID;							//模块标识
-	DWORD	                        dwPlazaVersion;						//广场版本
-	BYTE                            cbDeviceType;                       //设备类型
-
-																		//登录信息
-	TCHAR							szPassword[LEN_MD5];				//登录密码
-	TCHAR							szAccounts[LEN_ACCOUNTS];			//登录帐号
-
-																		//连接信息
-	TCHAR							szMachineID[LEN_MACHINE_ID];		//机器标识
-	TCHAR							szMobilePhone[LEN_MOBILE_PHONE];	//电话号码
-};
-
-struct CMD_MB_LogonFailure
-{
-	LONG							lResultCode;						//错误代码
-	TCHAR							szDescribeString[128];				//描述消息
-};
-
 
 #pragma pack()

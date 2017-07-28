@@ -264,6 +264,15 @@ bool GameNetWorkManager::OnEventTCPSocketShut(unsigned short wSocketID, unsigned
 	return true;
 }
 
+void GameNetWorkManager::update(float dt /*= 0.0f*/)
+{
+	if (m_isValid)
+	{
+		collectIdleNW();
+		updateNetWorkPool();
+	}
+}
+
 GameNetWorkManager::GameNetWorkManager()
 	:m_isValid(true),
 	m_isInited(false),

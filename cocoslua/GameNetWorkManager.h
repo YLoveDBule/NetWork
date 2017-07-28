@@ -6,6 +6,7 @@
 #include "GameNetWork.h"
 #include <map>
 #include <stack>
+#include "LongLiveBase.h"
 
 class NetMsgAdpoter
 {
@@ -16,7 +17,7 @@ public:
 	virtual bool onConnectShutdown(unsigned short sockid, unsigned char shutReason) = 0;
 };
 
-class GameNetWorkManager
+class GameNetWorkManager : public LongLiveComponent
 {
 public:
 	virtual ~GameNetWorkManager();
@@ -44,6 +45,7 @@ public:
 	virtual bool sendMessage(const SOCKET socketId, unsigned short wMainCmdID, unsigned short wSubCmdID, void *pData,unsigned int& sendSize);
 	virtual bool houseNetMessage(unsigned short wSocketID, TCP_Command command, void *pData, unsigned short wDataSize);
 	virtual bool OnEventTCPSocketShut(unsigned short wSocketID, unsigned char cbShutReason);
+	virtual void update(float dt = 0.0f) override;
 private:
 	GameNetWorkManager();
 	void updateNetWorkPool();
