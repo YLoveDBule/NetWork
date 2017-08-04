@@ -432,6 +432,9 @@ int TCPSocket::getData()
 				{
 					//send data 
 					sendData(MDM_KN_COMMAND, SUB_KN_DETECT_SOCKET, pDataBuffer, wDataSize);
+					printf("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$send heart break$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+					printf("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$>>>>>>> send heart break <<<<<$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+					printf("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$send heart break$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
 					break;
 				}
 				default:
